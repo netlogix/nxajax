@@ -1,0 +1,12 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  Netlogix\Nxajax\:
+    resource: '../Classes/*'
+
+  Netlogix\Nxajax\Mvc\View\JsonView:
+    public: true
+    shared: false
