@@ -7,20 +7,56 @@ namespace Netlogix\Nxajax\Tests\Unit\Middleware;
 use AssertionError;
 use Exception;
 use Netlogix\Nxajax\Middleware\AjaxRequestMiddleware;
-use Netlogix\Nxtestingframework\Tests\Unit\ContainerAwareUnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use Psr\Container\ContainerInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use RuntimeException;
 use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Core\TypoScript\TemplateService;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
+use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
 
-class AjaxRequestMiddlewareTest extends ContainerAwareUnitTestCase
+class AjaxRequestMiddlewareTest extends UnitTestCase implements ContainerInterface
 {
     protected bool $resetSingletonInstances = true;
+    private array $instances = [];
+
+    public function setUp(): void
+    {
+        parent::setUp();
+        $this->instances = [];
+        GeneralUtility::setContainer($this);
+    }
+
+    public function tearDown(): void
+    {
+        $this->instances = [];
+        parent::tearDown();
+    }
+
+    public function getContainer(): ContainerInterface
+    {
+        return $this;
+    }
+
+    public function get(string $id)
+    {
+        return $this->instances[$id];
+    }
+
+    public function has(string $id): bool
+    {
+        return array_key_exists($id, $this->instances);
+    }
+
+    public function set(string $id, $instance): void
+    {
+        $this->instances[$id] = $instance;
+    }
 
     public static function getPluginRenderingResults(): array
     {
@@ -122,7 +158,8 @@ class AjaxRequestMiddlewareTest extends ContainerAwareUnitTestCase
 
     #[Test]
     public function process_should_throw_runtime_exception_when_typo_script_frontend_controller_is_not_loaded_properly(
-    ): void {
+    ): void
+    {
         $pageId = 1;
 
         $typoScriptFrontendController = $this->getTypoScriptFrontendController($pageId);
@@ -214,8 +251,7 @@ class AjaxRequestMiddlewareTest extends ContainerAwareUnitTestCase
                 ->method('cObjGetSingle')
                 ->willReturnCallback(fn () => $renderingResults[$matcher->numberOfInvocations() - 1]);
 
-            $this->getContainer()
-                ->set(ContentObjectRenderer::class, $contentObjectRenderer);
+            $this->getContainer()->set(ContentObjectRenderer::class, $contentObjectRenderer);
         }
 
         $subject = new AjaxRequestMiddleware();
