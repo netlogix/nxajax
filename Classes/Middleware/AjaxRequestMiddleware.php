@@ -49,7 +49,8 @@ class AjaxRequestMiddleware implements MiddlewareInterface
                 $typoScriptObjectPath
             );
 
-            $pageId = $request->getAttribute('frontend.page.information')->getId();
+            $pageId = $request->getAttribute('frontend.page.information')
+                ->getId();
             $pageCacheTag = new CacheTag('pageId_' . $pageId);
             if (str_starts_with((string) $pageContent, '<!--INT_SCRIPT')) {
                 $contentContentObject = GeneralUtility::makeInstance(ContentObjectRenderer::class);
@@ -80,6 +81,7 @@ class AjaxRequestMiddleware implements MiddlewareInterface
             // @codeCoverageIgnoreEnd
 
             $response = $response->withBody($body);
+
             return $request->getAttribute('frontend.controller')
                 ->applyHttpHeadersToResponse($request, $response)
                 ->withHeader('Content-Length', (string) strlen((string) $pageContent));
@@ -94,7 +96,8 @@ class AjaxRequestMiddleware implements MiddlewareInterface
     ): array {
         $pathSegments = GeneralUtility::trimExplode('.', $typoScriptObjectPath);
         $lastSegment = array_pop($pathSegments);
-        $setup = $request->getAttribute('frontend.typoscript')->getSetupArray();
+        $setup = $request->getAttribute('frontend.typoscript')
+            ->getSetupArray();
         foreach ($pathSegments as $segment) {
             if (!array_key_exists($segment . '.', $setup)) {
                 throw new Exception(
@@ -116,12 +119,15 @@ class AjaxRequestMiddleware implements MiddlewareInterface
         return $setup;
     }
 
-    private function addPluginFormatToRequest(ServerRequestInterface $request, string $pluginNamespace): ServerRequestInterface
-    {
+    private function addPluginFormatToRequest(
+        ServerRequestInterface $request,
+        string $pluginNamespace
+    ): ServerRequestInterface {
         $routeArguments = $request->getAttribute('routing');
         assert($routeArguments instanceof PageArguments);
         $arguments = $routeArguments->getArguments();
         $arguments[$pluginNamespace]['format'] = 'json';
+
         return $request->withAttribute(
             'routing',
             new PageArguments(

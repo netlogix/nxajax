@@ -50,6 +50,7 @@ class JsonView implements ViewInterface
         if ((is_countable($variables) ? count($variables) : 0) === 1) {
             return json_encode(current($variables), JSON_THROW_ON_ERROR);
         }
+
         return json_encode($variables, JSON_THROW_ON_ERROR);
     }
 
