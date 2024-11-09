@@ -9,16 +9,32 @@ use TYPO3Fluid\Fluid\View\ViewInterface;
 
 class JsonView implements ViewInterface
 {
-    protected $exposeSettings = false;
+    protected bool $exposeSettings = false;
 
-    protected $variables = [];
+    protected array $variables = [];
 
-    public function setExposeSettings(bool $exposeSettings)
+    public function setExposeSettings(bool $exposeSettings): void
     {
         $this->exposeSettings = $exposeSettings;
     }
 
-    public function render()
+    public function assign($key, $value): static
+    {
+        $this->variables[$key] = $value;
+
+        return $this;
+    }
+
+    public function assignMultiple(array $values): static
+    {
+        foreach ($values as $key => $value) {
+            $this->assign($key, $value);
+        }
+
+        return $this;
+    }
+
+    public function render(): string
     {
         $variables = $this->variables;
         if (!$this->exposeSettings) {
@@ -33,25 +49,8 @@ class JsonView implements ViewInterface
 
         if ((is_countable($variables) ? count($variables) : 0) === 1) {
             return json_encode(current($variables), JSON_THROW_ON_ERROR);
-        } else {
-            return json_encode($variables, JSON_THROW_ON_ERROR);
         }
-    }
-
-    public function assign($key, $value)
-    {
-        $this->variables[$key] = $value;
-
-        return $this;
-    }
-
-    public function assignMultiple(array $values)
-    {
-        foreach ($values as $key => $value) {
-            $this->assign($key, $value);
-        }
-
-        return $this;
+        return json_encode($variables, JSON_THROW_ON_ERROR);
     }
 
     public function renderSection($sectionName, array $variables = [], $ignoreUnknown = false)

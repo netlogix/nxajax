@@ -12,7 +12,7 @@ use TYPO3\CMS\Extbase\Mvc\Controller\Argument;
 
 class AjaxController extends ExtbaseActionController
 {
-    protected $defaultViewObjectName = JsonView::class;
+    protected ?string $defaultViewObjectName = JsonView::class;
 
     public function errorAction(): ResponseInterface
     {
@@ -23,6 +23,7 @@ class AjaxController extends ExtbaseActionController
             if (!$validationResult->hasErrors()) {
                 continue;
             }
+
             $flattenErrors = $validationResult->getFlattenedErrors();
             foreach ($flattenErrors as $fullQualifiedPropertyPath => $errors) {
                 [$propertyName] = explode('.', (string) $fullQualifiedPropertyPath, 2);
@@ -36,6 +37,7 @@ class AjaxController extends ExtbaseActionController
                 }
             }
         }
+
         $this->view->assign('errors', [
             'errors' => $result,
         ]);

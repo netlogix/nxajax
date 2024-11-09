@@ -15,7 +15,7 @@ class AcceptHeaderHashBase implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $function = function (array &$params) use ($request) {
+        $function = function (array &$params) use ($request): void {
             $params['hashParameters'][self::class] = [];
             $params['hashParameters'][self::class]['REQUEST_METHOD'] = strtoupper((string) $request->getMethod());
 

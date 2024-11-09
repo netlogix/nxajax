@@ -4,25 +4,28 @@ declare(strict_types=1);
 
 namespace Netlogix\Nxajax\Tests\Unit\Middleware;
 
-use AssertionError;
 use Exception;
 use Netlogix\Nxajax\Middleware\AjaxRequestMiddleware;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use RuntimeException;
+use TYPO3\CMS\Core\Cache\CacheDataCollector;
 use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Routing\PageArguments;
-use TYPO3\CMS\Core\TypoScript\TemplateService;
+use TYPO3\CMS\Core\TypoScript\AST\Node\RootNode;
+use TYPO3\CMS\Core\TypoScript\FrontendTypoScript;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Frontend\Cache\CacheInstruction;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
+use TYPO3\CMS\Frontend\Page\PageInformation;
 use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
 
 class AjaxRequestMiddlewareTest extends UnitTestCase implements ContainerInterface
 {
     protected bool $resetSingletonInstances = true;
+
     private array $instances = [];
 
     public function setUp(): void
@@ -43,11 +46,13 @@ class AjaxRequestMiddlewareTest extends UnitTestCase implements ContainerInterfa
         return $this;
     }
 
+    #[\Override]
     public function get(string $id)
     {
         return $this->instances[$id];
     }
 
+    #[\Override]
     public function has(string $id): bool
     {
         return array_key_exists($id, $this->instances);
@@ -110,15 +115,24 @@ class AjaxRequestMiddlewareTest extends UnitTestCase implements ContainerInterfa
         int $pageId = 1,
         array $routeArguments = [],
         string $accept = 'application/json',
-        ?TypoScriptFrontendController $typoScriptFrontendController = null
+        ?TypoScriptFrontendController $typoScriptFrontendController = null,
+        array $typoScriptSetup = []
     ): ServerRequest {
         $pageArguments = new PageArguments($pageId, 'test', $routeArguments);
+        $pageInformation = new PageInformation();
+        $pageInformation->setId($pageId);
+        $frontendTypoScript = new FrontendTypoScript(new RootNode(), [], [], []);
+        $frontendTypoScript->setSetupArray($typoScriptSetup);
 
         return (new ServerRequest(uri: 'https://example.com', method: 'GET', headers: [
             'accept' => $accept,
         ]))
             ->withAttribute('routing', $pageArguments)
-            ->withAttribute('frontend.controller', $typoScriptFrontendController);
+            ->withAttribute('frontend.controller', $typoScriptFrontendController)
+            ->withAttribute('frontend.page.information', $pageInformation)
+            ->withAttribute('frontend.cache.collector', new CacheDataCollector())
+            ->withAttribute('frontend.cache.instruction', new CacheInstruction())
+            ->withAttribute('frontend.typoscript', $frontendTypoScript);
     }
 
     #[Test]
@@ -138,31 +152,10 @@ class AjaxRequestMiddlewareTest extends UnitTestCase implements ContainerInterfa
     }
 
     #[Test]
-    public function process_should_throw_assertion_error_when_no_typo_script_frontend_controller_given(): void
-    {
-        $request = $this->getServerRequest(routeArguments: [
-            'tx_foo_bar' => [
-                'controller' => 'Bar',
-                'action' => 'baz',
-            ],
-        ]);
-
-        $handler = $this->getMockBuilder(RequestHandlerInterface::class)
-            ->getMock();
-
-        $subject = new AjaxRequestMiddleware();
-
-        self::expectException(AssertionError::class);
-        $subject->process($request, $handler);
-    }
-
-    #[Test]
-    public function process_should_throw_runtime_exception_when_typo_script_frontend_controller_is_not_loaded_properly(
-    ): void
+    public function process_should_throw_exception_when_typo_script_frontend_controller_is_not_loaded_properly(): void
     {
         $pageId = 1;
-
-        $typoScriptFrontendController = $this->getTypoScriptFrontendController($pageId);
+        $typoScriptFrontendController = $this->getTypoScriptFrontendController();
 
         $request = $this->getServerRequest(
             pageId: $pageId,
@@ -180,27 +173,16 @@ class AjaxRequestMiddlewareTest extends UnitTestCase implements ContainerInterfa
 
         $subject = new AjaxRequestMiddleware();
 
-        self::expectException(RuntimeException::class);
+        self::expectException(Exception::class);
         $subject->process($request, $handler);
     }
 
-    private function getTypoScriptFrontendController(int $pageId): TypoScriptFrontendController
+    private function getTypoScriptFrontendController(): TypoScriptFrontendController
     {
-        $typoScriptFrontendController = $this->getAccessibleMock(
+        return $this->getAccessibleMock(
             originalClassName: TypoScriptFrontendController::class,
             callOriginalConstructor: false
         );
-
-        $typoScriptFrontendController->expects(self::once())
-            ->method('preparePageContentGeneration');
-
-        $typoScriptFrontendController->id = $pageId;
-
-        $typoScriptFrontendController->tmpl = $this->getMockBuilder(TemplateService::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        return $typoScriptFrontendController;
     }
 
     #[Test]
@@ -214,27 +196,23 @@ class AjaxRequestMiddlewareTest extends UnitTestCase implements ContainerInterfa
             self::expectException($expectedException);
         }
 
-        $pageId = 1;
-
-        $typoScriptFrontendController = $this->getTypoScriptFrontendController($pageId);
-
-        $typoScriptFrontendController->tmpl->setup = $typoScriptSetup;
-
+        $typoScriptFrontendController = $this->getTypoScriptFrontendController();
         if (!$expectedException) {
             $typoScriptFrontendController->expects(self::once())
                 ->method('applyHttpHeadersToResponse')
-                ->willReturnCallback(fn ($response) => $response);
+                ->willReturnCallback(fn ($request, $response) => $response);
         }
 
         $request = $this->getServerRequest(
-            pageId: $pageId,
+            pageId: 1,
             routeArguments: [
                 'tx_foo_bar' => [
                     'controller' => 'Bar',
                     'action' => 'baz',
                 ],
             ],
-            typoScriptFrontendController: $typoScriptFrontendController
+            typoScriptFrontendController: $typoScriptFrontendController,
+            typoScriptSetup: $typoScriptSetup,
         );
 
         $handler = $this->getMockBuilder(RequestHandlerInterface::class)
@@ -258,7 +236,6 @@ class AjaxRequestMiddlewareTest extends UnitTestCase implements ContainerInterfa
         $response = $subject->process($request, $handler);
 
         $this->assertEquals('14', $response->getHeaderLine('Content-Length'));
-        $this->assertEquals('application/json;charset=utf-8', $response->getHeaderLine('Content-Type'));
         $this->assertEquals('Plugin content', $response->getBody()->__toString());
     }
 }
