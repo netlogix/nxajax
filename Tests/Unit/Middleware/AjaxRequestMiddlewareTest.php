@@ -6,6 +6,7 @@ namespace Netlogix\Nxajax\Tests\Unit\Middleware;
 
 use Exception;
 use Netlogix\Nxajax\Middleware\AjaxRequestMiddleware;
+use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Container\ContainerInterface;
@@ -46,13 +47,13 @@ class AjaxRequestMiddlewareTest extends UnitTestCase implements ContainerInterfa
         return $this;
     }
 
-    #[\Override]
+    #[Override]
     public function get(string $id)
     {
         return $this->instances[$id];
     }
 
-    #[\Override]
+    #[Override]
     public function has(string $id): bool
     {
         return array_key_exists($id, $this->instances);
@@ -229,7 +230,8 @@ class AjaxRequestMiddlewareTest extends UnitTestCase implements ContainerInterfa
                 ->method('cObjGetSingle')
                 ->willReturnCallback(fn () => $renderingResults[$matcher->numberOfInvocations() - 1]);
 
-            $this->getContainer()->set(ContentObjectRenderer::class, $contentObjectRenderer);
+            $this->getContainer()
+                ->set(ContentObjectRenderer::class, $contentObjectRenderer);
         }
 
         $subject = new AjaxRequestMiddleware();
