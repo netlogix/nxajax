@@ -9,7 +9,6 @@
   },
   "require-dev": {
     "ext-sqlite3": "*",
-    "ssch/typo3-rector": "^2.11",
     "typo3/testing-framework": "^9.0",
     "phpunit/phpcov": "^10.0",
     "netlogix/coding-guidelines-php": "^1.0"
