@@ -35,9 +35,9 @@ jobs:
         shell: bash
         run: composer install --no-interaction
 
-      - name: 'Rector PHP Code'
-        shell: bash
-        run: composer rector-fix
+#      - name: 'Rector PHP Code'
+#        shell: bash
+#        run: composer rector-fix
 
       - name: 'Lint PHP Code'
         shell: bash
