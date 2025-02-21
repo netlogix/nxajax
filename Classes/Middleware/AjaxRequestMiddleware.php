@@ -31,11 +31,19 @@ class AjaxRequestMiddleware implements MiddlewareInterface
             $pluginNamespace = array_key_first($routeArguments);
             [$prefix, $extensionName, $pluginName] = explode('_', (string) $pluginNamespace);
             $pluginSignature = strtolower($extensionName . '_' . $pluginName);
-            $typoScriptObjectPath = 'tt_content.list.20.' . $pluginSignature;
 
-            $setup = $this->getPluginTypoScriptConfiguration($request, $typoScriptObjectPath);
-            $typoScriptObjectName = $setup[$pluginSignature];
-            $typoScriptObjectConfiguration = $setup[$pluginSignature . '.'];
+            try {
+                $typoScriptObjectPath = 'tt_content.' . $pluginSignature . '.20';
+                $setup = $this->getPluginTypoScriptConfiguration($request, $typoScriptObjectPath);
+                $typoScriptObjectName = $setup['20'];
+                $typoScriptObjectConfiguration = $setup['20.'];
+            } catch (Exception $exception) {
+                $typoScriptObjectPath = 'tt_content.list.20.' . $pluginSignature;
+                $setup = $this->getPluginTypoScriptConfiguration($request, $typoScriptObjectPath);
+                $typoScriptObjectName = $setup[$pluginSignature];
+                $typoScriptObjectConfiguration = $setup[$pluginSignature . '.'];
+            }
+
             $typoScriptObjectConfiguration['controller'] = $routeArguments[$pluginNamespace]['controller'] ?? '';
             $typoScriptObjectConfiguration['action'] = $routeArguments[$pluginNamespace]['action'] ?? '';
 
