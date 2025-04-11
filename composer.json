@@ -10,7 +10,7 @@
   "require-dev": {
     "ext-sqlite3": "*",
     "typo3/testing-framework": "^9.0",
-    "phpunit/phpcov": "^10.0",
+    "phpunit/phpcov": "^11.0",
     "netlogix/coding-guidelines-php": "^1.0"
   },
   "autoload": {
